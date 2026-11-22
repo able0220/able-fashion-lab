@@ -1,4 +1,4 @@
-import {tips,paintDrapes} from './advice.js';
+import {tips,paintDrapes} from './advice.js?v=4';
 import {hex,lab,startVision,stopVision,capture,drawTracking,colorHair,loadHair,loadFace} from './vision.js?v=2';
 import {initial,tops,bottoms,drawModel} from './wardrobe.js';
 const $=id=>document.getElementById(id),screen=$('screen'),ctx=screen.getContext('2d'),video=$('video'),panel=$('controls');
@@ -25,6 +25,7 @@ function guideArt(){
  ctx.strokeStyle='#c3a58b';for(let x of [-1,1])for(let y of [-1,1])shape([[x*129,y*157-y*20],[x*129,y*157],[x*129-x*20,y*157]]);ctx.restore();
  ctx.textAlign='center';ctx.fillStyle='#eaf1e7';ctx.font='bold 22px sans-serif';ctx.fillText('웹캠 연결 대기',400,465);ctx.font='15px sans-serif';ctx.fillStyle='#b6c9ba';ctx.fillText('얼굴 위치 가이드  ·  카메라 시작을 눌러 주세요',400,496);ctx.textAlign='left'
 }
+let framing="portrait";
 let latestDrape=null, frozenDrape=null;
 function styleAdvice(shape,parent){
  const info=tips[shape];
@@ -39,7 +40,7 @@ function styleAdvice(shape,parent){
 }
 function drawComparison(){
  const frame=frozenDrape||latestDrape;
- paintDrapes(screen,frame?.img,frame?.face,compare?[a,color]:[color]);
+ paintDrapes(screen,frame?.img,frame?.face,compare?[a,color]:[color],framing);
 }
 function renderFace(){
  el('p','한 명이 정면을 보고 잠시 멈추면 측정 버튼이 활성화됩니다.');let b=button(panel,measured?'다시 측정':'현재 얼굴 측정',()=>{let m=capture();if(m){measured=m;render();notify('측정 완료 · 결과가 현재 학생의 룩북에 반영되었습니다.')}},'primary');b.id='capture';b.disabled=!ready;
@@ -56,7 +57,8 @@ function renderFace(){
  const d=el('details',null);el('summary','얼굴형 분류 기준',d);el('p','교육용 규칙을 순서대로 적용합니다. 세로/광대폭 > 1.56이면 긴형, (이마폭−턱폭)/광대폭 > 0.12이면 하트형, 턱폭/광대폭 > 0.84이면 각진형, 세로/광대폭 < 1.28이면 둥근형, 그 밖은 타원형입니다. 경계값과 명칭은 실습용 가설입니다.',d);
 }
 function draping(){
- el('p','같은 얼굴을 두 번 보여 줍니다. 볼 옆과 턱 아래의 천 색만 바꾸며 입술선과 눈매 중 어디에 먼저 시선이 가는지 보세요.');
+ select('비교 구도',['헤어·어깨 함께 보기','얼굴 가까이 보기'],framing==='portrait'?'헤어·어깨 함께 보기':'얼굴 가까이 보기',v=>{framing=v==='헤어·어깨 함께 보기'?'portrait':'face';render()});
+ el('p',framing==='portrait'?'정수리와 어깨가 웹캠 안에 들어오도록 한 걸음 뒤로 앉으세요. 같은 헤어스타일에 천 색을 바꿔 얼굴과 머리색이 함께 주는 인상을 비교하세요.':'얼굴 윤곽 가까이에 색을 놓고 눈매와 입술 주변의 대비를 비교하세요.');
  let options=row();button(options,compare?'B 한 색 크게 보기':'A/B 나란히 보기',()=>{compare=!compare;render()});
  let hold=button(options,frozenDrape?'실시간으로 돌아가기':'표정 고정',()=>{
   if(frozenDrape)frozenDrape=null;
@@ -124,7 +126,7 @@ async function devices(){try{let list=(await navigator.mediaDevices.enumerateDev
 async function start(){if(starting)return;const gen=++generation;active=false;starting=true;ready=false;$('start').disabled=true;$('stop').disabled=false;render();await startVision(video,$('devices').value,frame,notify,stop);if(gen!==generation)return;starting=false;active=!!video.srcObject;render();if(active){notify('웹캠 연결 완료 · 정면을 보고 실습을 시작하세요.');devices()}}
 names.forEach((n,i)=>button($('nav'),n,()=>{mod=i;render();notify(['정면을 유지한 뒤 현재 얼굴 측정을 누르세요.','천 색상을 바꾸며 얼굴 주변의 대비를 비교하세요.','헤어 디자인과 색상을 선택하세요.','가상 체형에 맞춰 옷과 배색을 비교하세요.','저장한 PNG를 포토프린터에서 3:2 비율로 출력하세요.'][i])}));
 $('start').onclick=start;$('stop').onclick=()=>stop('카메라를 종료했습니다.');$('devices').onchange=()=>{if(active){stop('웹캠 전환 중');start()}};
-$('reset').onclick=()=>{if(!confirm('현재 학생의 측정값과 스타일을 지우고 다음 학생으로 교체할까요? 필요한 룩북을 먼저 저장하세요.'))return;measured=picked=a=outfitA=photo=null;saved=[];mod=season=hair=0;dye='원래 색';color=palettes[0][0];a=palettes[1][1];compare=true;showA=false;outfit=initial();$('student').textContent=String(++student).padStart(2,'0');stop('새 학생 실습을 시작할 수 있습니다.')};
+$('reset').onclick=()=>{if(!confirm('현재 학생의 측정값과 스타일을 지우고 다음 학생으로 교체할까요? 필요한 룩북을 먼저 저장하세요.'))return;measured=picked=a=outfitA=photo=null;saved=[];mod=season=hair=0;dye='원래 색';color=palettes[0][0];framing="portrait";a=palettes[1][1];compare=true;showA=false;outfit=initial();$('student').textContent=String(++student).padStart(2,'0');stop('새 학생 실습을 시작할 수 있습니다.')};
 $('full').onclick=()=>{(document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()).catch(()=>notify('Chrome에서 F11을 눌러 전체 화면을 사용할 수 있습니다.'))};$('guide').onclick=()=>$('modal').showModal();
 let drag=null;screen.onpointerdown=e=>{if(mod===3){drag=e.clientX;screen.setPointerCapture(e.pointerId)}};screen.onpointermove=e=>{if(drag!==null&&mod===3){let s=showA?outfitA:outfit;s.angle+=(e.clientX-drag)*.9;drag=e.clientX;drawModel(ctx,s)}};screen.onpointerup=screen.onpointercancel=()=>drag=null;
 window.addEventListener('pagehide',()=>stopVision(video));render();devices();
