@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ABLE FASHION LAB · 스타일링 스튜디오</title><link rel="stylesheet" href="studio.css">
+<header><div class="brand"><i>af</i> ABLE <b>FASHION LAB</b></div><div><button id="guide">수업 가이드</button> <button id="full">전체 화면</button></div></header>
+<main><div class="head"><div><small>STYLING WORKSPACE</small><h1>스타일링 스튜디오</h1></div><div class="session">실습자 <strong id="student">01</strong> <button id="reset">학생 교체 ↗</button></div></div>
+<nav id="nav" aria-label="실습 모듈"></nav>
+<div class="grid"><section class="viewer"><div class="bar"><b id="viewTitle">얼굴 트래킹</b><span id="signal">카메라 꺼짐</span></div><div class="stage"><canvas id="screen" width="800" height="600" aria-label="실습 미리보기"></canvas></div><div class="tools" id="cameraTools"><button class="primary" id="start">카메라 시작</button><select id="devices" aria-label="웹캠 선택"><option value="">기본 웹캠</option></select><button id="stop" disabled>종료</button></div><p id="notice" role="status">웹캠을 시작하면 얼굴 윤곽과 세 부위의 측정 위치가 표시됩니다.</p></section>
+<section class="panel"><small id="kicker"></small><h2 id="title"></h2><div id="controls"></div></section></div>
+<footer><b>ABLE FASHION LAB</b><span>영상과 측정값은 이 탭에서 처리됩니다.</span></footer></main>
+<video id="video" muted playsinline hidden></video>
+<dialog id="modal"><form method="dialog"><button class="close">닫기 ×</button><small>TEACHER GUIDE</small><h2>120분 수업 운영</h2><p>USB 웹캠을 연결하고 양쪽 LED를 같은 밝기로 맞추세요. 한 명만 화면에 들어오도록 자리를 조정하세요.</p><button id="preflight" type="button">AI 모델 연결 점검</button><p id="check" role="status"></p><ol><li>0–15분 · 색채 과학과 AI 원리</li><li>15–35분 · 얼굴형과 피부색 측정</li><li>35–55분 · 계절색 A/B 비교</li><li>55–75분 · 헤어 디자인과 염색</li><li>75–105분 · 마네킹 코디 비교</li><li>105–120분 · 룩북 저장과 발표</li></ol><p>4인 1조에서는 한 학생의 결과를 지우기 전에 룩북을 저장하세요. 모듈별로 돌아가며 진행할 때는 중간 룩북도 저장할 수 있습니다. 다음 학생은 새 세션에서 시작합니다.</p><p>모델 로딩 실패 시 학교망의 jsDelivr 및 Google Storage 접속을 확인한 후 다시 시작하세요. 색상 선택·의상·룩북은 카메라 없이 이용할 수 있습니다.</p></form></dialog>
+<script type="module" src="studio.js"></script></html>
