@@ -1,4 +1,4 @@
-import {hex,lab,startVision,stopVision,capture,drawTracking,colorHair,loadHair,loadFace} from './vision.js';
+import {hex,lab,startVision,stopVision,capture,drawTracking,colorHair,loadHair,loadFace} from './vision.js?v=2';
 import {initial,tops,bottoms,drawModel} from './wardrobe.js';
 const $=id=>document.getElementById(id),screen=$('screen'),ctx=screen.getContext('2d'),video=$('video'),panel=$('controls');
 const names=['얼굴 분석','퍼스널 컬러','헤어 디자인','패션 스타일링','디지털 룩북'],en=['FACE ANALYSIS','COLOR DRAPING','HAIR DESIGN','FASHION STUDIO','STYLE LOOKBOOK'];
@@ -76,7 +76,7 @@ function card(){
 }
 function download(){screen.toBlob(b=>{if(!b)return;let url=URL.createObjectURL(b),a=document.createElement('a');a.href=url;a.download='ABLE-lookbook-'+student+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000)},'image/png')}
 function lookbook(){el('p','측정값과 직접 선택한 스타일을 3:2 포토카드에 담습니다. 현재 코디 B가 인쇄됩니다.');button(panel,'룩북 PNG 저장',download,'primary');el('h3','얼굴 사진 선택');el('p','기본 룩북에는 얼굴 사진이 없습니다. 본인이 원할 때만 현재 웹캠 사진을 카드에 포함하세요.');let b=button(panel,photo?'사진 제외':'현재 웹캠 사진 포함',()=>{if(photo)photo=null;else if(active&&video.readyState>=2){photo=document.createElement('canvas');photo.width=photo.height=200;let sz=Math.min(video.videoWidth,video.videoHeight);photo.getContext('2d').drawImage(video,(video.videoWidth-sz)/2,(video.videoHeight-sz)/2,sz,sz,0,0,200,200)}render()});b.disabled=!photo&&!active}
-function render(){panel.replaceChildren();$('title').textContent=names[mod];$('kicker').textContent=en[mod];$('viewTitle').textContent=['얼굴 트래킹','가상 드레이핑','헤어 피팅','3D 마네킹','포토카드 미리보기'][mod];$('cameraTools').hidden=mod>=3;$('cameraTools').style.display=mod>=3?'none':'';[...$('nav').children].forEach((n,i)=>n.setAttribute('aria-current',i===mod));if(mod===3){screen.width=800;screen.height=560;drawModel(ctx,showA?outfitA:outfit)}else if(mod===4)card();else if(!active)guideArt();[renderFace,draping,hairs,wardrobe,lookbook][mod]();$('signal').textContent=mod>=3?(active?'웹캠 켜짐':'로컬 작업'):active?lastQuality||'웹캠 연결됨':starting?'준비 중':'카메라 꺼짐'}
+function render(){panel.replaceChildren();$('title').textContent=names[mod];$('kicker').textContent=en[mod];$('viewTitle').textContent=['얼굴 트래킹','가상 드레이핑','헤어 피팅','3D 마네킹','포토카드 미리보기'][mod];$('cameraTools').hidden=mod>=3;$('cameraTools').style.display=mod>=3&&!active&&!starting?'none':'';[...$('nav').children].forEach((n,i)=>n.setAttribute('aria-current',i===mod));if(mod===3){screen.width=800;screen.height=560;drawModel(ctx,showA?outfitA:outfit)}else if(mod===4)card();else if(!active)guideArt();[renderFace,draping,hairs,wardrobe,lookbook][mod]();$('signal').textContent=mod>=3?(active?'웹캠 켜짐':'로컬 작업'):active?lastQuality||'웹캠 연결됨':starting?'준비 중':'카메라 꺼짐'}
 function frame(img,f,count,stable,now){
  active=true;starting=false;$('stop').disabled=false;ready=stable>=8;let b=$('capture');if(b)b.disabled=!ready;
  lastQuality=f?(f.issue|| (ready?'측정 준비 완료':'정면 유지 중')):count>1?'한 명씩 앉아 주세요':'얼굴 찾는 중';

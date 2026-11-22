@@ -24,7 +24,7 @@ export async function loadFace(){
  return faceLoad
 }
 export async function loadHair(){
- if(!hairLoad)hairLoad=(async()=>{const {api,files}=await runtimeLoad();hair=await api.ImageSegmenter.createFromOptions(files,{baseOptions:{modelAssetPath:storage+'hair_segmenter/hair_segmenter/float32/1/hair_segmenter.tflite'},runningMode:'VIDEO',outputCategoryMask:true,outputConfidenceMasks:false})})().catch(e=>{hairLoad=null;throw e});
+ if(!hairLoad)hairLoad=(async()=>{const {api,files}=await runtimeLoad();hair=await api.ImageSegmenter.createFromOptions(files,{baseOptions:{delegate:'GPU',modelAssetPath:storage+'image_segmenter/hair_segmenter/float32/1/hair_segmenter.tflite'},runningMode:'VIDEO',outputCategoryMask:true,outputConfidenceMasks:false})})().catch(e=>{hairLoad=null;throw e});
  return hairLoad
 }
 export function stopVision(video){request++;cancelAnimationFrame(raf);stream?.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;latest=null;history=[];lastTime=-1;raw.width=1;tint.width=1}
@@ -69,5 +69,5 @@ export function capture(){
  const rgb=[0,1,2].map(i=>Math.round(colors.reduce((sum,c)=>sum+c[i],0)/3));return {g,colors,rgb,lab:lab(rgb)}
 }
 export function drawTracking(c,f){c.lineWidth=1.6;c.strokeStyle='#b1f4c9';c.beginPath();outline.forEach((i,j)=>{let q=f.p[i];j?c.lineTo(q.x,q.y):c.moveTo(q.x,q.y)});c.closePath();c.stroke();for(const q of f.p.filter((_,i)=>i%5===0)){c.fillStyle='#dbffe5aa';c.fillRect(q.x-1,q.y-1,2,2)}for(const q of f.points){c.strokeStyle='white';c.strokeRect(q.x-5,q.y-5,10,10)}}
-export function colorHair(c,img,now,color){if(!hair)return;hair.segmentForVideo(img,now,result=>{const m=result.categoryMask,data=m.getAsUint8Array();tint.width=m.width;tint.height=m.height;const pixels=tc.createImageData(m.width,m.height),rgb=color.match(/\w\w/g).map(s=>parseInt(s,16));for(let i=0;i<data.length;i++){if(data[i]===1)pixels.data.set([...rgb,180],i*4)}tc.putImageData(pixels,0,0);c.save();c.globalCompositeOperation='soft-light';c.drawImage(tint,0,0,img.width,img.height);c.globalCompositeOperation='source-over';c.globalAlpha=.42;c.drawImage(tint,0,0,img.width,img.height);c.restore()})}
+export function colorHair(c,img,now,color){if(!hair)return;hair.segmentForVideo(img,now,result=>{const m=result.categoryMask,data=m.getAsUint8Array();tint.width=m.width;tint.height=m.height;const pixels=tc.createImageData(m.width,m.height),rgb=color.match(/\w\w/g).map(s=>parseInt(s,16));for(let i=0;i<data.length;i++){if(data[i]===1){const j=i*4;pixels.data[j]=rgb[0];pixels.data[j+1]=rgb[1];pixels.data[j+2]=rgb[2];pixels.data[j+3]=180}}tc.putImageData(pixels,0,0);c.save();c.globalCompositeOperation='soft-light';c.drawImage(tint,0,0,img.width,img.height);c.globalCompositeOperation='source-over';c.globalAlpha=.42;c.drawImage(tint,0,0,img.width,img.height);c.restore()})}
 
