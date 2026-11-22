@@ -1,3 +1,4 @@
+import {tips,paintDrapes} from './advice.js';
 import {hex,lab,startVision,stopVision,capture,drawTracking,colorHair,loadHair,loadFace} from './vision.js?v=2';
 import {initial,tops,bottoms,drawModel} from './wardrobe.js';
 const $=id=>document.getElementById(id),screen=$('screen'),ctx=screen.getContext('2d'),video=$('video'),panel=$('controls');
@@ -5,7 +6,7 @@ const names=['얼굴 분석','퍼스널 컬러','헤어 디자인','패션 스�
 const seasons=['봄 웜','여름 쿨','가을 웜','겨울 쿨'],palettes=[
 ['#FF977F','#FFBF95','#EACB65','#A9CA89','#80CEBB','#F7E5B7'],['#D9A5B6','#C5AED5','#AABDD9','#B1CEC7','#D0BCCC','#D7D8EB'],['#AB6346','#947646','#A18B52','#657457','#8B5147','#C5A67B'],['#B62959','#584798','#245DA0','#236F64','#2F3040','#E9EDF6']];
 const hairNames=['원래 머리','단발','C컬 단발','중단발','긴 생머리','긴 웨이브','레이어드컷','시스루뱅','커튼뱅'],dyes={'원래 색':'','블랙':'#242224','다크 브라운':'#49362f','초코 브라운':'#704c3f','애쉬 브라운':'#85776c','애쉬 그레이':'#99999a','레드 브라운':'#9b5350','밀크 브라운':'#b18b69','블론드':'#d7bc82'};
-let mod=0,student=1,active=false,starting=false,generation=0,lastQuality='',ready=false,measured=null,season=0,picked=null,color=palettes[0][0],saved=[],a=null,compare=false,hair=0,dye='원래 색',outfit=initial(),outfitA=null,showA=false,photo=null;
+let mod=0,student=1,active=false,starting=false,generation=0,lastQuality='',ready=false,measured=null,season=0,picked=null,color=palettes[0][0],saved=[],a=palettes[1][1],compare=true,hair=0,dye='원래 색',outfit=initial(),outfitA=null,showA=false,photo=null;
 const notify=t=>$('notice').textContent=t;
 function el(tag,text,parent=panel){const node=document.createElement(tag);if(text!=null)node.textContent=text;parent.append(node);return node}
 function button(parent,label,action,cls=''){let b=el('button',label,parent);b.className=cls;b.onclick=action;return b}
@@ -24,8 +25,28 @@ function guideArt(){
  ctx.strokeStyle='#c3a58b';for(let x of [-1,1])for(let y of [-1,1])shape([[x*129,y*157-y*20],[x*129,y*157],[x*129-x*20,y*157]]);ctx.restore();
  ctx.textAlign='center';ctx.fillStyle='#eaf1e7';ctx.font='bold 22px sans-serif';ctx.fillText('웹캠 연결 대기',400,465);ctx.font='15px sans-serif';ctx.fillStyle='#b6c9ba';ctx.fillText('얼굴 위치 가이드  ·  카메라 시작을 눌러 주세요',400,496);ctx.textAlign='left'
 }
+let latestDrape=null, frozenDrape=null;
+function styleAdvice(shape,parent){
+ const info=tips[shape];
+ const box=el('section',null,parent);box.className='style-note';
+ el('h3',shape+' · 헤어 길이 비교',box);el('p',info.feature,box);
+ for(const [label,copy] of [['단발',info.short],['중단발',info.medium]]){
+  el('b',label,box);el('p',copy,box);
+ }
+ const actions=el('div',null,box);actions.className='row';
+ for(const style of info.styles)button(actions,style+' 체험',()=>{hair=hairNames.indexOf(style);mod=2;render();notify(style+'을 선택했습니다. 얼굴 옆에 머리 끝이 오는 위치를 관찰하세요.')});
+ const link=el('a','자료 · 로레알 파리 헤어 가이드 ↗',box);link.href=info.source;link.target='_blank';link.rel='noopener noreferrer';
+}
+function drawComparison(){
+ const frame=frozenDrape||latestDrape;
+ paintDrapes(screen,frame?.img,frame?.face,compare?[a,color]:[color]);
+}
 function renderFace(){
  el('p','한 명이 정면을 보고 잠시 멈추면 측정 버튼이 활성화됩니다.');let b=button(panel,measured?'다시 측정':'현재 얼굴 측정',()=>{let m=capture();if(m){measured=m;render();notify('측정 완료 · 결과가 현재 학생의 룩북에 반영되었습니다.')}},'primary');b.id='capture';b.disabled=!ready;
+ if(measured)styleAdvice(measured.g.shape,panel);
+ else {const guide=el('details',null);el('summary','얼굴형별 헤어 가이드 미리보기',guide);
+ const chooser=el('select',null,guide);chooser.setAttribute('aria-label','예시 얼굴형');Object.keys(tips).forEach(shape=>el('option',shape,chooser));
+ const preview=el('div',null,guide);const show=()=>{preview.replaceChildren();styleAdvice(chooser.value,preview)};chooser.onchange=show;show()}
  el('h3','측정값 · 피부색');if(!measured)line('이마 · 양쪽 볼 측정 대기');else{
  const m=measured;line('평균 RGB '+m.rgb.join(' / ')+'   '+hex(m.rgb));line('CIELAB (D65)  '+m.lab.join(' / '));
  m.colors.forEach((v,i)=>{let d=line('');chip(d,hex(v));d.append(['이마','볼 ①','볼 ②'][i]+'   '+hex(v)+' · L* '+lab(v)[0])});
@@ -35,9 +56,20 @@ function renderFace(){
  const d=el('details',null);el('summary','얼굴형 분류 기준',d);el('p','교육용 규칙을 순서대로 적용합니다. 세로/광대폭 > 1.56이면 긴형, (이마폭−턱폭)/광대폭 > 0.12이면 하트형, 턱폭/광대폭 > 0.84이면 각진형, 세로/광대폭 < 1.28이면 둥근형, 그 밖은 타원형입니다. 경계값과 명칭은 실습용 가설입니다.',d);
 }
 function draping(){
+ el('p','같은 얼굴을 두 번 보여 줍니다. 볼 옆과 턱 아래의 천 색만 바꾸며 입술선과 눈매 중 어디에 먼저 시선이 가는지 보세요.');
+ let options=row();button(options,compare?'B 한 색 크게 보기':'A/B 나란히 보기',()=>{compare=!compare;render()});
+ let hold=button(options,frozenDrape?'실시간으로 돌아가기':'표정 고정',()=>{
+  if(frozenDrape)frozenDrape=null;
+  else if(latestDrape){const still=document.createElement('canvas');still.width=latestDrape.img.width;still.height=latestDrape.img.height;still.getContext('2d').drawImage(latestDrape.img,0,0);frozenDrape={img:still,face:latestDrape.face}}
+  render()
+ });hold.id='hold';hold.disabled=!frozenDrape&&!latestDrape;
+ el('h3','두 색 바로 비교');let pairs=row();
+ for(const [name,ref,si,idx] of [['코럴 · 라벤더',palettes[0][0],1,1],['연분홍 · 베리',palettes[1][0],3,0],['크림 · 차콜',palettes[0][5],3,4]])button(pairs,name,()=>{a=ref;season=si;color=palettes[si][idx];compare=true;render()});
+ el('h3','B 색상 바꾸기');
  select('비교할 계절',seasons,seasons[season],v=>{season=seasons.indexOf(v);color=palettes[season][0];render()});
  let sw=el('div',null);sw.className='swatches';for(const col of palettes[season]){let b=button(sw,'',()=>{color=col;render()});b.style.background=col;b.title=col;b.setAttribute('aria-label',col);b.setAttribute('aria-pressed',col===color)}
- line('현재 천   '+color);let r=row();button(r,'A에 고정',()=>{a=color;compare=true;render()});let cmp=button(r,compare?'한 색 보기':'A/B 비교',()=>{compare=!compare;render()});cmp.disabled=!a;if(a)line('A '+a+'   /   B '+color);
+ line('B 선택색   '+color);button(panel,'이 색을 A 기준색으로 고정',()=>{a=color;compare=true;render()});line('A '+a+'   /   B '+color);
+ el('p','얼굴 추적 전에는 두 화면에 같은 기준색을 표시합니다. 실제 천에서 피부로 되비치는 빛은 화면에 재현되지 않습니다.');
  el('h3','내가 선택한 팔레트');button(panel,'현재 색 '+(saved.includes(color)?'빼기':'담기'),()=>{if(saved.includes(color))saved=saved.filter(v=>v!==color);else if(saved.length<5)saved.push(color);else return notify('다섯 색을 담았습니다. 기존 색을 빼면 새 색을 담을 수 있습니다.');render()});
  let d=line('');saved.forEach(col=>{let b=button(d,col,()=>{saved=saved.filter(v=>v!==col);render()});chip(b,col);b.title='눌러서 빼기'});if(!saved.length)d.append('비교한 색 중 3~5개를 담으세요.');
  button(panel,'이 계절을 룩북에 선택',()=>{picked=seasons[season];render()},'primary');line('나의 선택 · '+(picked??'미선택'));el('p',measured?'측정한 평균색은 '+hex(measured.rgb)+'입니다. 천을 번갈아 보며 얼굴 주변의 대비를 관찰하세요.':'측정 없이도 계절별 천을 비교할 수 있습니다.')
@@ -53,10 +85,6 @@ function wardrobe(){
  for(const [k,n,min,max] of [['height','키 (cm)',160,190],['weight','몸무게 (kg)',40,80],['shoulder','어깨너비',80,120],['waist','허리 비율',80,120],['hip','골반 비율',80,120],['torso','상체 길이',85,115],['arm','팔 길이',85,115],['leg','다리 길이',85,115]]){let l=el('label',null,details);l.className='field';let v=el('span',n+' '+outfit[k],l),i=el('input',null,l);i.type='range';i.min=min;i.max=max;i.value=outfit[k];i.oninput=()=>{v.textContent=n+' '+i.value;edit(k,+i.value)}}
  el('h3','시점과 비교');let r=row();for(const [n,ang] of [['정면',0],['측면',90],['후면',180]])button(r,n,()=>edit('angle',ang));button(r,'확대',()=>edit('zoom',Math.min(1.4,outfit.zoom+.1)));button(r,'축소',()=>edit('zoom',Math.max(.6,outfit.zoom-.1)));
  let r2=row();button(r2,'현재 코디 A 저장',()=>{outfitA={...outfit};showA=false;render()});let b=button(r2,showA?'현재 코디 B 보기':'저장 코디 A 보기',()=>{showA=!showA;render()});b.disabled=!outfitA;line(showA?'저장 코디 A 표시 중':'현재 코디 B · 룩북에 자동 반영');el('p','마네킹을 좌우로 드래그하면 회전합니다.')
-}
-function cloth(c,f,w,h){
- let cy=f.p[152].y+f.g.width*.06,cx=f.p[152].x,span=f.g.width*1.8;
- function half(left,col){c.save();c.beginPath();c.rect(left?0:cx,0,left?cx:w-cx,h);c.clip();let g=c.createLinearGradient(cx-span,0,cx+span,0);g.addColorStop(0,'#333');g.addColorStop(.3,col);g.addColorStop(.55,col);g.addColorStop(1,'#555');c.fillStyle=g;c.beginPath();c.moveTo(cx-span,h);c.quadraticCurveTo(cx-span*.7,cy,cx-f.g.width*.32,cy);c.quadraticCurveTo(cx,cy+f.g.width*.2,cx+f.g.width*.32,cy);c.quadraticCurveTo(cx+span*.7,cy,cx+span,h);c.fill();c.restore()}half(true,compare&&a?a:color);half(false,color)
 }
 function wig(c,f){
  if(!hair)return;let w=f.g.width,top=f.p[10];c.save();c.translate(top.x,top.y);c.rotate(f.g.roll);c.scale(w,w);let fill=dyes[dye]||'#49382f',len=[0,1.04,1.08,1.5,2.03,2.03,1.67,.48,.58][hair],wave=hair===5?.19:hair===2?.1:.035;
@@ -76,22 +104,27 @@ function card(){
 }
 function download(){screen.toBlob(b=>{if(!b)return;let url=URL.createObjectURL(b),a=document.createElement('a');a.href=url;a.download='ABLE-lookbook-'+student+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000)},'image/png')}
 function lookbook(){el('p','측정값과 직접 선택한 스타일을 3:2 포토카드에 담습니다. 현재 코디 B가 인쇄됩니다.');button(panel,'룩북 PNG 저장',download,'primary');el('h3','얼굴 사진 선택');el('p','기본 룩북에는 얼굴 사진이 없습니다. 본인이 원할 때만 현재 웹캠 사진을 카드에 포함하세요.');let b=button(panel,photo?'사진 제외':'현재 웹캠 사진 포함',()=>{if(photo)photo=null;else if(active&&video.readyState>=2){photo=document.createElement('canvas');photo.width=photo.height=200;let sz=Math.min(video.videoWidth,video.videoHeight);photo.getContext('2d').drawImage(video,(video.videoWidth-sz)/2,(video.videoHeight-sz)/2,sz,sz,0,0,200,200)}render()});b.disabled=!photo&&!active}
-function render(){panel.replaceChildren();$('title').textContent=names[mod];$('kicker').textContent=en[mod];$('viewTitle').textContent=['얼굴 트래킹','가상 드레이핑','헤어 피팅','3D 마네킹','포토카드 미리보기'][mod];$('cameraTools').hidden=mod>=3;$('cameraTools').style.display=mod>=3&&!active&&!starting?'none':'';[...$('nav').children].forEach((n,i)=>n.setAttribute('aria-current',i===mod));if(mod===3){screen.width=800;screen.height=560;drawModel(ctx,showA?outfitA:outfit)}else if(mod===4)card();else if(!active)guideArt();[renderFace,draping,hairs,wardrobe,lookbook][mod]();$('signal').textContent=mod>=3?(active?'웹캠 켜짐':'로컬 작업'):active?lastQuality||'웹캠 연결됨':starting?'준비 중':'카메라 꺼짐'}
+function render(){if(mod!==1){latestDrape=null;frozenDrape=null}panel.replaceChildren();$('title').textContent=names[mod];$('kicker').textContent=en[mod];$('viewTitle').textContent=['얼굴 트래킹','가상 드레이핑','헤어 피팅','3D 마네킹','포토카드 미리보기'][mod];$('cameraTools').hidden=mod>=3;$('cameraTools').style.display=mod>=3&&!active&&!starting?'none':'';[...$('nav').children].forEach((n,i)=>n.setAttribute('aria-current',i===mod));if(mod===3){screen.width=800;screen.height=560;drawModel(ctx,showA?outfitA:outfit)}else if(mod===4)card();else if(mod===1)drawComparison();else if(!active)guideArt();[renderFace,draping,hairs,wardrobe,lookbook][mod]();$('signal').textContent=mod>=3?(active?'웹캠 켜짐':'로컬 작업'):active?lastQuality||'웹캠 연결됨':starting?'준비 중':'카메라 꺼짐'}
 function frame(img,f,count,stable,now){
  active=true;starting=false;$('stop').disabled=false;ready=stable>=8;let b=$('capture');if(b)b.disabled=!ready;
  lastQuality=f?(f.issue|| (ready?'측정 준비 완료':'정면 유지 중')):count>1?'한 명씩 앉아 주세요':'얼굴 찾는 중';
  if(mod>=3)return;$('signal').textContent=lastQuality;
+ if(mod===1){
+ latestDrape=f?{img,face:f}:null;
+ const hold=$('hold');if(hold)hold.disabled=!latestDrape&&!frozenDrape;
+ drawComparison();if(frozenDrape)$('signal').textContent='표정 고정 중';return
+ }
  let w=img.width,h=img.height;if(screen.width!==w||screen.height!==h){screen.width=w;screen.height=h}
  ctx.save();ctx.clearRect(0,0,w,h);ctx.translate(w,0);ctx.scale(-1,1);
  if(f){const z=Math.max(1,Math.min(1.8,w*.35/f.g.width)),cx=(f.p[234].x+f.p[454].x)/2,cy=(f.p[10].y+f.p[152].y)/2;ctx.translate(Math.max(w-w*z,Math.min(0,w/2-cx*z)),Math.max(h-h*z,Math.min(0,h*.43-cy*z)));ctx.scale(z,z)}
- ctx.drawImage(img,0,0);if(f){if(mod===0)drawTracking(ctx,f);if(mod===1)cloth(ctx,f,w,h);if(mod===2){if(dyes[dye])colorHair(ctx,img,now,dyes[dye]);wig(ctx,f)}}ctx.restore()
+ ctx.drawImage(img,0,0);if(f){if(mod===0)drawTracking(ctx,f);if(mod===2){if(dyes[dye])colorHair(ctx,img,now,dyes[dye]);wig(ctx,f)}}ctx.restore()
 }
-function stop(message){generation++;stopVision(video);starting=active=ready=false;lastQuality='';$('start').disabled=false;$('stop').disabled=true;render();notify(message)}
+function stop(message){latestDrape=frozenDrape=null;generation++;stopVision(video);starting=active=ready=false;lastQuality='';$('start').disabled=false;$('stop').disabled=true;render();notify(message)}
 async function devices(){try{let list=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput'),selected=video.srcObject?.getVideoTracks()[0]?.getSettings().deviceId||$('devices').value;$('devices').replaceChildren(new Option('기본 웹캠',''));list.forEach((d,i)=>{if(d.deviceId)$('devices').add(new Option(d.label||'웹캠 '+(i+1),d.deviceId))});$('devices').value=selected}catch{}}
 async function start(){if(starting)return;const gen=++generation;active=false;starting=true;ready=false;$('start').disabled=true;$('stop').disabled=false;render();await startVision(video,$('devices').value,frame,notify,stop);if(gen!==generation)return;starting=false;active=!!video.srcObject;render();if(active){notify('웹캠 연결 완료 · 정면을 보고 실습을 시작하세요.');devices()}}
 names.forEach((n,i)=>button($('nav'),n,()=>{mod=i;render();notify(['정면을 유지한 뒤 현재 얼굴 측정을 누르세요.','천 색상을 바꾸며 얼굴 주변의 대비를 비교하세요.','헤어 디자인과 색상을 선택하세요.','가상 체형에 맞춰 옷과 배색을 비교하세요.','저장한 PNG를 포토프린터에서 3:2 비율로 출력하세요.'][i])}));
 $('start').onclick=start;$('stop').onclick=()=>stop('카메라를 종료했습니다.');$('devices').onchange=()=>{if(active){stop('웹캠 전환 중');start()}};
-$('reset').onclick=()=>{if(!confirm('현재 학생의 측정값과 스타일을 지우고 다음 학생으로 교체할까요? 필요한 룩북을 먼저 저장하세요.'))return;measured=picked=a=outfitA=photo=null;saved=[];mod=season=hair=0;dye='원래 색';color=palettes[0][0];compare=showA=false;outfit=initial();$('student').textContent=String(++student).padStart(2,'0');stop('새 학생 실습을 시작할 수 있습니다.')};
+$('reset').onclick=()=>{if(!confirm('현재 학생의 측정값과 스타일을 지우고 다음 학생으로 교체할까요? 필요한 룩북을 먼저 저장하세요.'))return;measured=picked=a=outfitA=photo=null;saved=[];mod=season=hair=0;dye='원래 색';color=palettes[0][0];a=palettes[1][1];compare=true;showA=false;outfit=initial();$('student').textContent=String(++student).padStart(2,'0');stop('새 학생 실습을 시작할 수 있습니다.')};
 $('full').onclick=()=>{(document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()).catch(()=>notify('Chrome에서 F11을 눌러 전체 화면을 사용할 수 있습니다.'))};$('guide').onclick=()=>$('modal').showModal();
 let drag=null;screen.onpointerdown=e=>{if(mod===3){drag=e.clientX;screen.setPointerCapture(e.pointerId)}};screen.onpointermove=e=>{if(drag!==null&&mod===3){let s=showA?outfitA:outfit;s.angle+=(e.clientX-drag)*.9;drag=e.clientX;drawModel(ctx,s)}};screen.onpointerup=screen.onpointercancel=()=>drag=null;
 window.addEventListener('pagehide',()=>stopVision(video));render();devices();
