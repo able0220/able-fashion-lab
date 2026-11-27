@@ -1,6 +1,6 @@
-<!doctype html><meta charset=utf-8><title>수업 전 샘플 점검</title><link rel="stylesheet" href="studio.css"><main><h1>샘플 영상 점검</h1><p>공개 우주인 사진(scikit-image)을 반복 재생하여 얼굴 모델과 헤어 분리를 검사합니다. 실제 웹캠은 사용하지 않습니다.</p><button id="test">샘플 점검 실행</button><pre id="log"></pre><video hidden id="feed" muted playsinline></video><canvas id="mock" width=640 height=480></canvas><canvas id="preview" style="max-width:100%" hidden></canvas></main><script type="module">
-import {paintDrapes} from './advice.js?v=4';
-import {startVision,capture,stopVision,colorHair,loadHair} from './vision.js?v=2';
+﻿<!doctype html><meta charset=utf-8><title>수업 전 샘플 점검</title><link rel="stylesheet" href="studio.css"><main><h1>샘플 영상 점검</h1><p>공개 우주인 사진(scikit-image)을 반복 재생하여 얼굴 모델과 헤어 분리를 검사합니다. 실제 웹캠은 사용하지 않습니다.</p><button id="test">샘플 점검 실행</button><pre id="log"></pre><video hidden id="feed" muted playsinline></video><canvas id="mock" width=640 height=480></canvas><canvas id="preview" style="max-width:100%" hidden></canvas></main><script type="module">
+import {paintDrapes} from './advice.js?v=5';
+import {startVision,capture,stopVision,colorHair,loadHair} from './vision.js?v=3';
 const out=document.querySelector('#log'),v=document.querySelector('#feed'),c=document.querySelector('#mock'),ctx=c.getContext('2d');
 document.querySelector('#test').onclick=async()=>{document.querySelector('#test').disabled=true;let timer,frames=0,stream;const record=s=>out.textContent+=s+'\n';try{
 const img=new Image();img.crossOrigin='anonymous';img.src='https://raw.githubusercontent.com/scikit-image/scikit-image/v0.22.0/skimage/data/astronaut.png';await img.decode();
@@ -9,7 +9,8 @@ Object.defineProperty(navigator.mediaDevices,'getUserMedia',{value:async()=>stre
 await loadHair();record('헤어 모델 준비 완료');await startVision(v,'',(raw,f,n,stable,now)=>{frames++;if(frames===1)record('Faces '+n+' · '+(f?.issue||'quality OK'));if(stable>=8||frames>=40){let result=capture();if(f){const preview=document.querySelector('#preview');preview.hidden=false;paintDrapes(preview,raw,f,['#FF977F','#C5AED5']);const view=preview.getContext('2d');const pixels=(x,y,w,h)=>view.getImageData(x,y,w,h).data;
 const left=pixels(210,235,60,45),right=pixels(690,235,60,45);
 const upperRight=pixels(670,135,100,22);
-record(left.every((v,i)=>v===right[i])&&pixels(235,505,1,1)[0]!==pixels(715,505,1,1)[0]&&pixels(190,135,100,22).every((v,i)=>v===upperRight[i])?'A/B 확인 완료 · 상반신 구도에서 얼굴과 머리 영역 동일, 턱 아래 천 색상 다름':'A/B 픽셀 검사 실패');
+const same=(a,b)=>a.every((v,i)=>Math.abs(v-b[i])<=2);// GPU scaling can differ by one level between panels
+record(same(left,right)&&pixels(235,505,1,1)[0]!==pixels(715,505,1,1)[0]&&same(pixels(190,135,100,22),upperRight)?'A/B 확인 완료 · 상반신 구도에서 얼굴과 머리 영역 동일, 턱 아래 천 색상 다름':'A/B 픽셀 검사 실패');
 colorHair(ctx,raw,now,'#775342')}record(JSON.stringify({frames,stable,issue:f?.issue,rgb:result?.rgb,shape:result?.g.shape,segmented:!!f}));queueMicrotask(()=>{stopVision(v);clearInterval(timer);record('점검 종료 · 다시 실행하려면 새로고침하세요.')})}},record,record)
 }catch(e){record('점검 실패 '+e.message);clearInterval(timer);stream?.getTracks().forEach(t=>t.stop())}}
 </script>
